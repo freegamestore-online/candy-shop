@@ -1,17 +1,22 @@
-// ── Morning Phase Scene ───────────────────────────────────────────────────────
-// Shows the daily event, then runs the 3-item sorting mini-game.
+// ── Morning Prep Scene ────────────────────────────────────────────────────────
+// Player buys stock, upgrades candy tiers, upgrades security, then opens shop.
 
 import kaplay from "kaplay";
 import {
   GameState,
-  DailyEvent,
-  EVENT_LABELS,
-  EVENT_DESC,
+  CandyCategory,
   GUMMY_TIERS,
   CHOCO_TIERS,
   HARD_TIERS,
-  CandyCategory,
+  UPGRADE_COSTS,
   STAGES,
+  EVENT_LABELS,
+  EVENT_DESC,
+  DailyEvent,
+  SEC_COSTS,
+  SEC_NAMES,
+  currentTier,
+  saveState,
 } from "./state";
 
 type K = ReturnType<typeof kaplay>;
@@ -19,310 +24,305 @@ type K = ReturnType<typeof kaplay>;
 const VW = 480;
 const VH = 640;
 
-const SORT_ITEMS: { name: string; cat: CandyCategory }[] = [
-  { name: "Sour Worms",     cat: "gummy" },
-  { name: "Neon Bears",     cat: "gummy" },
-  { name: "Galaxy Rings",   cat: "gummy" },
-  { name: "Milk Buttons",   cat: "choco" },
-  { name: "Fudge Cubes",    cat: "choco" },
-  { name: "Gold Choc Bars", cat: "choco" },
-  { name: "Mint Drops",     cat: "hard"  },
-  { name: "Lemon Discs",    cat: "hard"  },
-  { name: "Crystal Rocks",  cat: "hard"  },
-];
+const DAILY_EVENTS: DailyEvent[] = ["normal", "normal", "normal", "flash", "bogo", "rainy", "thief_spree"];
 
-const CAT_COLORS: Record<CandyCategory, [number, number, number]> = {
-  gummy: [255, 100, 180],
-  choco: [160, 100,  60],
-  hard:  [100, 200, 255],
-};
-
-function pickEvent(): DailyEvent {
-  const pool: DailyEvent[] = ["normal", "normal", "flash", "bogo", "rainy", "thief_spree"];
-  return pool[Math.floor(Math.random() * pool.length)]!;
-}
-
-function shuffle<T>(arr: T[]): T[] {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j]!, a[i]!];
-  }
-  return a;
+function rollEvent(): DailyEvent {
+  return DAILY_EVENTS[Math.floor(Math.random() * DAILY_EVENTS.length)]!;
 }
 
 export function registerMorningScene(k: K, gs: GameState, onDone: () => void) {
   k.scene("morning", () => {
-    gs.dailyEvent = pickEvent();
-    const stage = STAGES[gs.stageIdx]!;
+    // Roll today's event
+    gs.dailyEvent = rollEvent();
 
     // Background
-    k.add([k.rect(VW, VH), k.color(30, 20, 40), k.pos(0, 0), k.fixed()]);
+    k.add([k.rect(VW, VH), k.color(20, 15, 35), k.pos(0, 0), k.fixed()]);
+
+    const stage = STAGES[gs.stageIdx]!;
 
     // Header
     k.add([
-      k.text(`Day ${gs.day}  •  ${stage.name}`, { size: 14, font: "sans-serif" }),
-      k.color(180, 180, 200),
-      k.pos(VW / 2, 18),
-      k.anchor("center"),
-    ]);
-    k.add([
-      k.text("🌅 Good Morning!", { size: 26, font: "sans-serif" }),
+      k.text("☀️ Morning Prep", { size: 22, font: "sans-serif" }),
       k.color(255, 220, 80),
-      k.pos(VW / 2, 50),
+      k.pos(VW / 2, 22),
+      k.anchor("center"),
+    ]);
+    k.add([
+      k.text(`Day ${gs.day}  —  ${stage.name}`, { size: 13, font: "sans-serif" }),
+      k.color(180, 160, 220),
+      k.pos(VW / 2, 46),
       k.anchor("center"),
     ]);
 
-    // Event card
-    k.add([
-      k.rect(380, 72, { radius: 8 }),
-      k.color(50, 40, 70),
-      k.pos(VW / 2, 100),
-      k.anchor("center"),
+    // Cash / Rep
+    const cashLbl = k.add([
+      k.text(`💰 $${gs.cash}`, { size: 15, font: "sans-serif" }),
+      k.color(120, 255, 120),
+      k.pos(12, 68),
+      k.anchor("topleft"),
     ]);
-    k.add([
-      k.text(EVENT_LABELS[gs.dailyEvent], { size: 17, font: "sans-serif" }),
-      k.color(255, 240, 120),
-      k.pos(VW / 2, 86),
-      k.anchor("center"),
-    ]);
-    k.add([
-      k.text(EVENT_DESC[gs.dailyEvent], { size: 11, font: "sans-serif", width: 340 }),
-      k.color(200, 200, 220),
-      k.pos(VW / 2, 110),
-      k.anchor("center"),
+    const repLbl = k.add([
+      k.text(`⭐ ${gs.reputation}%`, { size: 15, font: "sans-serif" }),
+      k.color(255, 220, 80),
+      k.pos(VW - 12, 68),
+      k.anchor("topright"),
     ]);
 
-    // Stats bar
-    k.add([
-      k.text(
-        `💰 $${gs.cash.toFixed(0)}   ⭐ ${gs.reputation}% Rep   Rent: $${stage.rent}`,
-        { size: 13, font: "sans-serif" },
-      ),
-      k.color(160, 220, 160),
-      k.pos(VW / 2, 156),
-      k.anchor("center"),
-    ]);
-
-    // Stock display
-    const gName = GUMMY_TIERS[gs.gummyTier]?.name ?? "Gummies";
-    const cName = CHOCO_TIERS[gs.chocoTier]?.name ?? "Chocolates";
-    const hName = HARD_TIERS[gs.hardTier]?.name ?? "Hard Candy";
-    k.add([
-      k.text(
-        `Stock: ${gName}×${gs.stock.gummy}  ${cName}×${gs.stock.choco}  ${hName}×${gs.stock.hard}`,
-        { size: 11, font: "sans-serif", width: 420 },
-      ),
-      k.color(180, 180, 200),
-      k.pos(VW / 2, 178),
-      k.anchor("center"),
-    ]);
-
-    // Mini-game header
-    k.add([
-      k.text("📦 Stockroom Sort!", { size: 20, font: "sans-serif" }),
-      k.color(100, 220, 255),
-      k.pos(VW / 2, 210),
-      k.anchor("center"),
-    ]);
-    k.add([
-      k.text(
-        "Sort 3 items correctly within 3s each → +3 stock per category",
-        { size: 11, font: "sans-serif", width: 380 },
-      ),
-      k.color(160, 160, 180),
-      k.pos(VW / 2, 232),
-      k.anchor("center"),
-    ]);
-    k.add([
-      k.text("[G] Gummies   [C] Chocolates   [H] Hard", { size: 13, font: "sans-serif" }),
-      k.color(200, 200, 220),
-      k.pos(VW / 2, 252),
-      k.anchor("center"),
-    ]);
-
-    // ── Mini-game state ───────────────────────────────────────────────────────
-    const queue = shuffle(SORT_ITEMS).slice(0, 3);
-    let idx = 0;
-    let elapsed = 0;
-    let phase: "sorting" | "result" = "sorting";
-    let allCorrect = true;
-    let done = false;
-
-    // Timer bar (bg first so it's behind)
-    k.add([
-      k.rect(300, 12, { radius: 4 }),
-      k.color(60, 60, 80),
-      k.pos(VW / 2, 340),
-      k.anchor("center"),
-    ]);
-    const timerBar = k.add([
-      k.rect(300, 12, { radius: 4 }),
-      k.color(80, 220, 80),
-      k.pos(VW / 2, 340),
-      k.anchor("center"),
-    ]);
-
-    const itemLabel = k.add([
-      k.text("", { size: 20, font: "sans-serif" }),
-      k.color(255, 255, 255),
-      k.pos(VW / 2, 305),
-      k.anchor("center"),
-    ]);
-
-    // Progress dots
-    const dots: ReturnType<K["add"]>[] = [];
-    for (let i = 0; i < 3; i++) {
-      dots.push(
-        k.add([
-          k.circle(10),
-          k.color(80, 80, 100),
-          k.pos(VW / 2 - 30 + i * 30, 362),
-          k.anchor("center"),
-        ]),
-      );
+    function refreshTop() {
+      cashLbl.text = `💰 $${gs.cash}`;
+      repLbl.text  = `⭐ ${gs.reputation}%`;
     }
 
-    const feedbackLabel = k.add([
-      k.text("", { size: 15, font: "sans-serif" }),
-      k.color(255, 200, 80),
-      k.pos(VW / 2, 390),
+    // Today's event card
+    const evColor: Record<DailyEvent, [number, number, number]> = {
+      normal:      [40, 50, 60],
+      flash:       [80, 60, 10],
+      bogo:        [10, 70, 50],
+      rainy:       [30, 40, 70],
+      thief_spree: [80, 20, 20],
+    };
+    const [er, eg, eb] = evColor[gs.dailyEvent];
+    k.add([
+      k.rect(440, 62, { radius: 10 }),
+      k.color(er, eg, eb),
+      k.pos(VW / 2, 112),
+      k.anchor("center"),
+    ]);
+    k.add([
+      k.text(`Today: ${EVENT_LABELS[gs.dailyEvent]}`, { size: 15, font: "sans-serif" }),
+      k.color(255, 240, 180),
+      k.pos(VW / 2, 98),
+      k.anchor("center"),
+    ]);
+    k.add([
+      k.text(EVENT_DESC[gs.dailyEvent], { size: 12, font: "sans-serif", width: 420 }),
+      k.color(200, 195, 215),
+      k.pos(VW / 2, 118),
       k.anchor("center"),
     ]);
 
-    // Category buttons
-    const BTN_Y = 460;
-    const btnDefs: { cat: CandyCategory; x: number; label: string }[] = [
-      { cat: "gummy", x: VW / 2 - 130, label: "[G]\nGummies" },
-      { cat: "choco", x: VW / 2,        label: "[C]\nChocolates" },
-      { cat: "hard",  x: VW / 2 + 130,  label: "[H]\nHard" },
-    ];
-    const catBtns: { cat: CandyCategory; bg: ReturnType<K["add"]> }[] = [];
-    for (const def of btnDefs) {
-      const bg = k.add([
-        k.rect(100, 60, { radius: 8 }),
-        k.color(...CAT_COLORS[def.cat]),
-        k.pos(def.x, BTN_Y),
-        k.anchor("center"),
+    // ── Section: Restock ──────────────────────────────────────────────────────
+    k.add([
+      k.text("🛒 Restock  ($3 each)", { size: 14, font: "sans-serif" }),
+      k.color(160, 200, 255),
+      k.pos(14, 152),
+      k.anchor("topleft"),
+    ]);
+
+    const RESTOCK_COST = 3;
+    const cats: CandyCategory[] = ["gummy", "choco", "hard"];
+    const catEmoji: Record<CandyCategory, string> = { gummy: "🍬", choco: "🍫", hard: "🍭" };
+    const stockLbls: Partial<Record<CandyCategory, ReturnType<K["add"]>>> = {};
+
+    cats.forEach((cat, i) => {
+      const y = 178 + i * 44;
+      const tier = currentTier(gs, cat);
+
+      k.add([
+        k.text(`${catEmoji[cat]} ${tier.name}`, { size: 13, font: "sans-serif" }),
+        k.color(220, 215, 235),
+        k.pos(14, y),
+        k.anchor("topleft"),
+      ]);
+
+      const stockLbl = k.add([
+        k.text(`×${gs.stock[cat]}`, { size: 13, font: "sans-serif" }),
+        k.color(160, 255, 160),
+        k.pos(200, y),
+        k.anchor("topleft"),
+      ]);
+      stockLbls[cat] = stockLbl;
+
+      // − button
+      const minusBtn = k.add([
+        k.rect(36, 32, { radius: 6 }),
+        k.color(100, 60, 60),
+        k.pos(260, y - 4),
+        k.anchor("topleft"),
         k.area(),
       ]);
       k.add([
-        k.text(def.label, { size: 12, font: "sans-serif", align: "center" }),
-        k.color(255, 255, 255),
-        k.pos(def.x, BTN_Y),
+        k.text("−", { size: 18, font: "sans-serif" }),
+        k.color(255, 180, 180),
+        k.pos(278, y + 12),
         k.anchor("center"),
       ]);
-      catBtns.push({ cat: def.cat, bg });
+      minusBtn.onClick(() => {
+        if (gs.stock[cat] <= 0) return;
+        gs.stock[cat]--;
+        gs.cash += RESTOCK_COST;
+        const lbl = stockLbls[cat];
+        if (lbl) lbl.text = `×${gs.stock[cat]}`;
+        refreshTop();
+      });
+
+      // + button
+      const plusBtn = k.add([
+        k.rect(36, 32, { radius: 6 }),
+        k.color(40, 100, 60),
+        k.pos(304, y - 4),
+        k.anchor("topleft"),
+        k.area(),
+      ]);
+      k.add([
+        k.text("+", { size: 18, font: "sans-serif" }),
+        k.color(160, 255, 180),
+        k.pos(322, y + 12),
+        k.anchor("center"),
+      ]);
+      plusBtn.onClick(() => {
+        if (gs.cash < RESTOCK_COST) return;
+        gs.cash -= RESTOCK_COST;
+        gs.stock[cat]++;
+        const lbl = stockLbls[cat];
+        if (lbl) lbl.text = `×${gs.stock[cat]}`;
+        refreshTop();
+      });
+
+      // Upgrade button
+      const tierIdx = cat === "gummy" ? gs.gummyTier : cat === "choco" ? gs.chocoTier : gs.hardTier;
+      const costs = UPGRADE_COSTS[cat];
+      const upgradeCost = tierIdx < 2 ? costs[tierIdx]! : null;
+      const nextTiers = cat === "gummy" ? GUMMY_TIERS : cat === "choco" ? CHOCO_TIERS : HARD_TIERS;
+      const nextTierExists = tierIdx < 2 && nextTiers[tierIdx + 1] !== undefined;
+
+      if (upgradeCost !== null && nextTierExists) {
+        const upgBtn = k.add([
+          k.rect(120, 32, { radius: 6 }),
+          k.color(60, 40, 100),
+          k.pos(352, y - 4),
+          k.anchor("topleft"),
+          k.area(),
+        ]);
+        const upgLbl = k.add([
+          k.text(`⬆ $${upgradeCost}`, { size: 12, font: "sans-serif" }),
+          k.color(200, 180, 255),
+          k.pos(412, y + 12),
+          k.anchor("center"),
+        ]);
+        upgBtn.onClick(() => {
+          if (gs.cash < upgradeCost) return;
+          gs.cash -= upgradeCost;
+          if (cat === "gummy") gs.gummyTier++;
+          else if (cat === "choco") gs.chocoTier++;
+          else gs.hardTier++;
+          upgLbl.text = "✅ Done";
+          upgBtn.color = k.rgb(30, 60, 30);
+          refreshTop();
+        });
+      } else if (tierIdx >= 2) {
+        k.add([
+          k.text("MAX ✨", { size: 12, font: "sans-serif" }),
+          k.color(255, 220, 60),
+          k.pos(420, y + 12),
+          k.anchor("center"),
+        ]);
+      }
+    });
+
+    // ── Section: Security ─────────────────────────────────────────────────────
+    const secY = 320;
+    k.add([
+      k.text("🔒 Security", { size: 14, font: "sans-serif" }),
+      k.color(160, 200, 255),
+      k.pos(14, secY),
+      k.anchor("topleft"),
+    ]);
+    k.add([
+      k.text(SEC_NAMES[gs.secLevel]!, { size: 13, font: "sans-serif" }),
+      k.color(200, 195, 220),
+      k.pos(14, secY + 24),
+      k.anchor("topleft"),
+    ]);
+
+    if (gs.secLevel < 3) {
+      const secCost = SEC_COSTS[gs.secLevel]!;
+      const secBtn = k.add([
+        k.rect(180, 36, { radius: 8 }),
+        k.color(50, 40, 100),
+        k.pos(VW - 14, secY + 16),
+        k.anchor("topright"),
+        k.area(),
+      ]);
+      const secBtnLbl = k.add([
+        k.text(`⬆ Upgrade  $${secCost}`, { size: 13, font: "sans-serif" }),
+        k.color(200, 180, 255),
+        k.pos(VW - 14 - 90, secY + 34),
+        k.anchor("center"),
+      ]);
+      secBtn.onClick(() => {
+        if (gs.cash < secCost) return;
+        gs.cash -= secCost;
+        gs.secLevel++;
+        secBtnLbl.text = gs.secLevel < 3 ? `⬆ Upgrade  $${SEC_COSTS[gs.secLevel]!}` : "MAX 🔒";
+        secBtn.color = gs.secLevel < 3 ? k.rgb(50, 40, 100) : k.rgb(30, 60, 30);
+        refreshTop();
+      });
+    } else {
+      k.add([
+        k.text("MAX 🔒", { size: 13, font: "sans-serif" }),
+        k.color(255, 220, 60),
+        k.pos(VW - 14, secY + 34),
+        k.anchor("topright"),
+      ]);
     }
 
-    // Open Shop button
+    // ── Rent reminder ─────────────────────────────────────────────────────────
+    k.add([
+      k.text(`🏠 Tonight's rent: $${stage.rent}`, { size: 13, font: "sans-serif" }),
+      k.color(255, 160, 80),
+      k.pos(14, 378),
+      k.anchor("topleft"),
+    ]);
+    if (stage.target !== null) {
+      k.add([
+        k.text(`🎯 Stage target: $${stage.target} cash`, { size: 13, font: "sans-serif" }),
+        k.color(180, 220, 255),
+        k.pos(14, 400),
+        k.anchor("topleft"),
+      ]);
+    } else {
+      k.add([
+        k.text("🎯 Endless mode — survive as long as you can!", { size: 13, font: "sans-serif" }),
+        k.color(180, 220, 255),
+        k.pos(14, 400),
+        k.anchor("topleft"),
+      ]);
+    }
+
+    // ── Open Shop button ──────────────────────────────────────────────────────
     const openBtn = k.add([
-      k.rect(180, 50, { radius: 10 }),
-      k.color(60, 180, 100),
-      k.pos(VW / 2, 540),
+      k.rect(280, 62, { radius: 14 }),
+      k.color(80, 180, 80),
+      k.pos(VW / 2, 470),
       k.anchor("center"),
       k.area(),
     ]);
     k.add([
-      k.text("Open Shop →", { size: 16, font: "sans-serif" }),
+      k.text("🛍️ Open the Shop!", { size: 22, font: "sans-serif" }),
       k.color(255, 255, 255),
-      k.pos(VW / 2, 540),
+      k.pos(VW / 2, 470),
       k.anchor("center"),
     ]);
-    openBtn.onClick(() => { if (!done) { done = true; onDone(); } });
 
-    // Platform attribution
+    let pulse = 0;
+    k.onUpdate(() => {
+      pulse += k.dt() * 2;
+      const s = 1 + Math.sin(pulse) * 0.03;
+      openBtn.width  = 280 * s;
+      openBtn.height = 62 * s;
+    });
+
+    openBtn.onClick(() => { saveState(gs); onDone(); });
+    k.onKeyPress("enter", () => { saveState(gs); onDone(); });
+    k.onKeyPress("space", () => { saveState(gs); onDone(); });
+
+    // Attribution
     k.add([
       k.text("freegamestore.online", { size: 10, font: "sans-serif" }),
-      k.color(80, 80, 110),
+      k.color(60, 55, 80),
       k.pos(VW / 2, VH - 14),
       k.anchor("center"),
     ]);
-
-    function renderItem() {
-      const item = queue[idx];
-      if (!item) return;
-      itemLabel.text = `Item ${idx + 1}/3: ${item.name}`;
-      elapsed = 0;
-      timerBar.width = 300;
-    }
-
-    function handleGuess(cat: CandyCategory) {
-      if (phase !== "sorting" || done) return;
-      const item = queue[idx];
-      if (!item) return;
-      const correct = item.cat === cat;
-      if (correct) {
-        feedbackLabel.text = "✓ Correct!";
-        feedbackLabel.color = k.rgb(80, 255, 120);
-        if (dots[idx]) dots[idx]!.color = k.rgb(80, 255, 120);
-      } else {
-        feedbackLabel.text = "✗ Wrong!";
-        feedbackLabel.color = k.rgb(255, 80, 80);
-        if (dots[idx]) dots[idx]!.color = k.rgb(255, 80, 80);
-        allCorrect = false;
-      }
-      idx++;
-      if (idx >= 3) {
-        phase = "result";
-        showResult();
-      } else {
-        k.wait(0.3, renderItem);
-      }
-    }
-
-    function showResult() {
-      if (allCorrect) {
-        gs.stock.gummy += 3;
-        gs.stock.choco += 3;
-        gs.stock.hard  += 3;
-        itemLabel.text = "🎉 Perfect! +3 stock each!";
-        itemLabel.color = k.rgb(80, 255, 120);
-      } else {
-        itemLabel.text = "No stock gained.";
-        itemLabel.color = k.rgb(255, 120, 80);
-      }
-      timerBar.width = 0;
-      feedbackLabel.text = "Tap 'Open Shop' to start the shift!";
-      feedbackLabel.color = k.rgb(200, 200, 220);
-    }
-
-    for (const btn of catBtns) {
-      btn.bg.onClick(() => handleGuess(btn.cat));
-    }
-
-    k.onKeyPress("g", () => handleGuess("gummy"));
-    k.onKeyPress("c", () => handleGuess("choco"));
-    k.onKeyPress("h", () => handleGuess("hard"));
-    k.onKeyPress("enter", () => { if (!done) { done = true; onDone(); } });
-    k.onKeyPress("space", () => { if (!done) { done = true; onDone(); } });
-
-    k.onUpdate(() => {
-      if (phase !== "sorting" || done) return;
-      elapsed += k.dt();
-      const frac = Math.max(0, 1 - elapsed / 3);
-      timerBar.width = 300 * frac;
-      if (frac > 0.5)       timerBar.color = k.rgb(80, 220, 80);
-      else if (frac > 0.25) timerBar.color = k.rgb(255, 200, 60);
-      else                  timerBar.color = k.rgb(255, 80, 80);
-
-      if (elapsed >= 3) {
-        // Time's up for this item
-        feedbackLabel.text = "⏱ Too slow!";
-        feedbackLabel.color = k.rgb(255, 80, 80);
-        if (dots[idx]) dots[idx]!.color = k.rgb(255, 80, 80);
-        allCorrect = false;
-        idx++;
-        elapsed = 0;
-        if (idx >= 3) {
-          phase = "result";
-          showResult();
-        } else {
-          k.wait(0.3, renderItem);
-        }
-      }
-    });
-
-    renderItem();
   });
 }

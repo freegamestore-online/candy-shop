@@ -1,5 +1,5 @@
 // ── Afternoon Shift Scene ─────────────────────────────────────────────────────
-// Real-time timed events: serve customers by typing codes, catch thieves.
+// Real-time timed events: serve customers by tapping/typing codes, catch thieves.
 
 import kaplay from "kaplay";
 import {
@@ -173,7 +173,7 @@ export function registerShiftScene(k: K, gs: GameState, onDone: () => void) {
       }
     }
 
-    // Category buttons (for touch)
+    // Category buttons (for touch/click)
     const BTN_Y = 490;
     const btnDefs: { cat: CandyCategory; x: number; label: string }[] = [
       { cat: "gummy", x: VW / 2 - 130, label: "GUM\n[G]" },
@@ -213,7 +213,7 @@ export function registerShiftScene(k: K, gs: GameState, onDone: () => void) {
       k.anchor("center"),
     ]);
 
-    // Platform attribution
+    // Attribution
     k.add([
       k.text("freegamestore.online", { size: 10, font: "sans-serif" }),
       k.color(60, 80, 60),
@@ -276,7 +276,7 @@ export function registerShiftScene(k: K, gs: GameState, onDone: () => void) {
       eventType = "customer";
       const cats: CandyCategory[] = ["gummy", "choco", "hard"];
       customerCat = cats[Math.floor(Math.random() * 3)]!;
-      const name    = catName(gs, customerCat);
+      const name     = catName(gs, customerCat);
       const patience = gs.dailyEvent === "flash" ? 2 : 4;
       timeLeft = patience;
 
@@ -397,9 +397,8 @@ export function registerShiftScene(k: K, gs: GameState, onDone: () => void) {
         if (typed.slice(-3) === CODE[customerCat]) {
           resolveCustomer(true);
         } else if (typed.length >= 5) {
-          // Clear bad input after 5 chars
           typed = "";
-          inputLabel.text  = "_";
+          inputLabel.text     = "_";
           feedbackLabel.text  = "Wrong code! Try again.";
           feedbackLabel.color = k.rgb(255, 80, 80);
         }
@@ -409,7 +408,7 @@ export function registerShiftScene(k: K, gs: GameState, onDone: () => void) {
       }
     });
 
-    // Touch buttons
+    // Touch / click buttons
     for (const btn of catBtns) {
       btn.bg.onClick(() => {
         if (eventType !== "customer") return;
@@ -450,7 +449,7 @@ export function registerShiftScene(k: K, gs: GameState, onDone: () => void) {
       }
     });
 
-    // Kick off first event
+    // Kick off first event after a short delay
     k.wait(1.2, nextEvent);
   });
 }

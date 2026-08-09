@@ -8,18 +8,18 @@ export interface CandyTier {
 }
 
 export const GUMMY_TIERS: CandyTier[] = [
-  { name: "Sour Worms",  price: 5  },
-  { name: "Neon Bears",  price: 15 },
-  { name: "Galaxy Rings", price: 40 },
+  { name: "Sour Worms",    price: 5  },
+  { name: "Neon Bears",    price: 15 },
+  { name: "Galaxy Rings",  price: 40 },
 ];
 export const CHOCO_TIERS: CandyTier[] = [
-  { name: "Milk Buttons",       price: 5  },
-  { name: "Fudge Cubes",        price: 15 },
-  { name: "Gold Choc Bars",     price: 40 },
+  { name: "Milk Buttons",   price: 5  },
+  { name: "Fudge Cubes",    price: 15 },
+  { name: "Gold Choc Bars", price: 40 },
 ];
 export const HARD_TIERS: CandyTier[] = [
-  { name: "Mint Drops",   price: 5  },
-  { name: "Lemon Discs",  price: 15 },
+  { name: "Mint Drops",    price: 5  },
+  { name: "Lemon Discs",   price: 15 },
   { name: "Crystal Rocks", price: 40 },
 ];
 
@@ -79,6 +79,7 @@ export function makeInitialState(): GameState {
   if (saved) {
     try { return JSON.parse(saved) as GameState; } catch { /* fall through */ }
   }
+  const hs = parseInt(localStorage.getItem("candyshop_highscore") ?? "0", 10) || 0;
   return {
     cash: 30,
     reputation: 50,
@@ -90,12 +91,13 @@ export function makeInitialState(): GameState {
     stock: { gummy: 5, choco: 5, hard: 5 },
     secLevel: 0,
     dailyEvent: "normal",
-    highScore: 0,
+    highScore: hs,
   };
 }
 
 export function saveState(gs: GameState) {
   localStorage.setItem("candyshop_save", JSON.stringify(gs));
+  localStorage.setItem("candyshop_highscore", String(gs.highScore));
 }
 
 export function clearSave() {
@@ -105,7 +107,7 @@ export function clearSave() {
 // ── Security upgrade costs ────────────────────────────────────────────────────
 export const SEC_COSTS = [30, 80, 200]; // cost to go from 0→1, 1→2, 2→3
 export const SEC_NAMES = ["No Cameras", "Basic Cameras", "HD CCTV", "AI Smart Tracking"];
-export const SEC_WINDOWS = [1.5, 3, 4.5, 6]; // seconds to type STOP
+export const SEC_WINDOWS = [1.5, 3, 4.5, 6]; // seconds to catch thief
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 export function currentTier(gs: GameState, cat: CandyCategory): CandyTier {
