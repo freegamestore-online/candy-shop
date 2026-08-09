@@ -1,92 +1,176 @@
+// ── Candy Shop Tycoon: Sweet Security ────────────────────────────────────────
+// game.ts — KAPLAY entry point. Registers all scenes and drives the daily cycle.
+// Scene logic lives in lib/morning.ts, lib/shift.ts, lib/night.ts.
+
 import kaplay from "kaplay";
+import { makeInitialState, saveState, clearSave, STAGES, GameState } from "./lib/state";
+import { registerMorningScene } from "./lib/morning";
+import { registerShiftScene } from "./lib/shift";
+import { registerNightScene } from "./lib/night";
 
-// A complete, playable game in ~75 lines — because KAPLAY gives you sprites,
-// input, gravity, areas and collisions as verbs. Compare this to hand-rolling a
-// game loop, a renderer and a physics step on a raw <canvas>. Replace the body of
-// the "play" scene to build your own game; keep `startGame`'s signature so
-// App.tsx can mount it.
-//
-// Catch: move the basket to catch falling fruit. Miss three and it's game over.
+const VW = 480;
+const VH = 640;
 
-const VW = 400; // virtual width  (KAPLAY letterboxes this to the real canvas)
-const VH = 600; // virtual height
-
-export function startGame(canvas: HTMLCanvasElement, onScore: (n: number) => void): () => void {
+export function startGame(
+  canvas: HTMLCanvasElement,
+  onScore: (n: number) => void,
+): () => void {
   const k = kaplay({
     canvas,
     width: VW,
     height: VH,
     letterbox: true,
-    background: [24, 24, 27],
-    global: false, // don't pollute window — call methods on `k`
+    background: [10, 10, 25],
+    global: false,
     pixelDensity: Math.min(window.devicePixelRatio || 1, 2),
   });
 
-  k.scene("play", () => {
-    let score = 0;
-    let lives = 3;
-    onScore(0);
+  // Shared mutable state — passed by reference so all scenes mutate the same object.
+  const gs: GameState = makeInitialState();
+  onScore(gs.highScore);
 
-    const basket = k.add([
-      k.rect(72, 20, { radius: 4 }),
-      k.color(16, 185, 129), // brand emerald
-      k.area(),
-      k.anchor("center"),
-      k.pos(VW / 2, VH - 48),
-      "basket",
-    ]);
+  // ── Forward-declared navigation functions ─────────────────────────────────
+  // These are defined as `let` so they can reference each other in closures.
 
-    // Move the basket to the pointer (touch or mouse) — the whole control scheme.
-    k.onMouseMove((mpos) => {
-      basket.pos.x = k.clamp(mpos.x, 36, VW - 36);
-    });
-    // Keyboard fallback for desktop.
-    k.onUpdate(() => {
-      if (k.isKeyDown("left")) basket.pos.x = Math.max(36, basket.pos.x - 6);
-      if (k.isKeyDown("right")) basket.pos.x = Math.min(VW - 36, basket.pos.x + 6);
-    });
+  let goMorning: () => void;
+  let goShift: () => void;
+  let goNight: () => void;
+  let goGameOver: (reason: string) => void;
 
-    // Spawn a piece of fruit that falls at a random speed.
-    function spawnFruit() {
+  goMorning = () => {
+    registerMorningScene(k, gs, () => goShift());
+    k.go("morning");
+  };
+
+  goShift = () => {
+    registerShiftScene(k, gs, () => goNight());
+    k.go("shift");
+  };
+
+  goNight = () => {
+    registerNightScene(
+      k,
+      gs,
+      () => { onScore(gs.highScore); goMorning(); },
+      (reason) => { onScore(gs.highScore); goGameOver(reason); },
+    );
+    k.go("night");
+  };
+
+  // ── Game Over Scene ───────────────────────────────────────────────────────
+  goGameOver = (reason: string) => {
+    // Register fresh each time so captured values are current
+    k.scene("gameover", () => {
+      const highScore = gs.highScore;
+      const day = gs.day;
+
+      k.add([k.rect(VW, VH), k.color(10, 5, 20), k.pos(0, 0), k.fixed()]);
+
+      const isBankrupt = reason === "bankrupt";
+
       k.add([
-        k.circle(k.rand(8, 13)),
-        k.color(k.choose([k.rgb(239, 68, 68), k.rgb(250, 204, 21), k.rgb(59, 130, 246), k.rgb(244, 114, 182)])),
-        k.area(),
+        k.text(isBankrupt ? "💸 BANKRUPT!" : "🔒 SHOP CLOSED!", {
+          size: 30,
+          font: "sans-serif",
+        }),
+        k.color(isBankrupt ? 255 : 200, 80, 80),
+        k.pos(VW / 2, 100),
         k.anchor("center"),
-        k.pos(k.rand(24, VW - 24), -20),
-        k.move(k.DOWN, k.rand(120, 220)),
-        "fruit",
       ]);
-      k.wait(k.rand(0.5, 1.1), spawnFruit);
-    }
-    spawnFruit();
 
-    basket.onCollide("fruit", (fruit) => {
-      k.destroy(fruit);
-      score += 1;
-      onScore(score);
-    });
+      k.add([
+        k.text(
+          isBankrupt
+            ? "You couldn't cover the rent.\nThe shop has gone bankrupt."
+            : "Too many unhappy customers & robberies.\nReputation hit 0% — city inspectors\nshut you down.",
+          { size: 13, font: "sans-serif", align: "center", width: 400 },
+        ),
+        k.color(200, 180, 220),
+        k.pos(VW / 2, 185),
+        k.anchor("center"),
+      ]);
 
-    // A fruit that falls past the bottom costs a life.
-    k.onUpdate("fruit", (fruit) => {
-      if (fruit.pos.y > VH + 20) {
-        k.destroy(fruit);
-        lives -= 1;
-        if (lives <= 0) k.go("over", score);
+      k.add([
+        k.text(`📅 Survived ${day - 1} day${day - 1 === 1 ? "" : "s"}`, {
+          size: 18,
+          font: "sans-serif",
+        }),
+        k.color(200, 200, 255),
+        k.pos(VW / 2, 270),
+        k.anchor("center"),
+      ]);
+
+      k.add([
+        k.text(`🏆 Best Cash: $${highScore}`, { size: 18, font: "sans-serif" }),
+        k.color(255, 220, 80),
+        k.pos(VW / 2, 308),
+        k.anchor("center"),
+      ]);
+
+      const stageReached = STAGES[gs.stageIdx]?.name ?? "";
+      k.add([
+        k.text(`📍 Reached: ${stageReached}`, { size: 13, font: "sans-serif" }),
+        k.color(160, 160, 200),
+        k.pos(VW / 2, 344),
+        k.anchor("center"),
+      ]);
+
+      // Tip
+      k.add([
+        k.text(
+          isBankrupt
+            ? "💡 Tip: Serve more customers & upgrade candy tiers for bigger earnings."
+            : "💡 Tip: Upgrade Security & keep customers happy to protect your rep.",
+          { size: 11, font: "sans-serif", align: "center", width: 400 },
+        ),
+        k.color(140, 140, 160),
+        k.pos(VW / 2, 390),
+        k.anchor("center"),
+      ]);
+
+      const btn = k.add([
+        k.rect(220, 54, { radius: 12 }),
+        k.color(80, 60, 160),
+        k.pos(VW / 2, 480),
+        k.anchor("center"),
+        k.area(),
+      ]);
+      k.add([
+        k.text("▶ Play Again", { size: 20, font: "sans-serif" }),
+        k.color(255, 255, 255),
+        k.pos(VW / 2, 480),
+        k.anchor("center"),
+      ]);
+
+      btn.onClick(doRestart);
+      k.onKeyPress("space", doRestart);
+      k.onKeyPress("enter", doRestart);
+
+      function doRestart() {
+        clearSave();
+        const fresh = makeInitialState();
+        // Reset gs in-place — all scene closures share this reference
+        gs.cash       = fresh.cash;
+        gs.reputation = fresh.reputation;
+        gs.day        = fresh.day;
+        gs.stageIdx   = fresh.stageIdx;
+        gs.gummyTier  = fresh.gummyTier;
+        gs.chocoTier  = fresh.chocoTier;
+        gs.hardTier   = fresh.hardTier;
+        gs.stock      = { ...fresh.stock };
+        gs.secLevel   = fresh.secLevel;
+        gs.dailyEvent = fresh.dailyEvent;
+        gs.highScore  = highScore; // preserve best score
+        saveState(gs);
+        goMorning();
       }
     });
-  });
 
-  k.scene("over", (finalScore: number) => {
-    k.add([k.text("Game Over", { size: 40 }), k.anchor("center"), k.pos(VW / 2, VH / 2 - 30), k.color(255, 255, 255)]);
-    k.add([k.text(`Score: ${finalScore}`, { size: 24 }), k.anchor("center"), k.pos(VW / 2, VH / 2 + 16), k.color(16, 185, 129)]);
-    k.add([k.text("tap to play again", { size: 16 }), k.anchor("center"), k.pos(VW / 2, VH / 2 + 56), k.color(160, 160, 160)]);
-    k.onMousePress(() => k.go("play"));
-    k.onKeyPress("space", () => k.go("play"));
-  });
+    k.go("gameover");
+  };
 
-  k.go("play");
+  // ── Boot ──────────────────────────────────────────────────────────────────
+  goMorning();
 
-  // KAPLAY manages the RAF loop; return a teardown so React can unmount cleanly.
   return () => k.quit();
 }
