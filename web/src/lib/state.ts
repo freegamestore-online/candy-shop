@@ -18,9 +18,9 @@ export const CHOCO_TIERS: CandyTier[] = [
   { name: "Gold Choc Bars", price: 40 },
 ];
 export const HARD_TIERS: CandyTier[] = [
-  { name: "Mint Drops",    price: 5  },
-  { name: "Lemon Discs",   price: 15 },
-  { name: "Crystal Rocks", price: 40 },
+  { name: "Mint Drops",     price: 5  },
+  { name: "Lemon Discs",    price: 15 },
+  { name: "Crystal Rocks",  price: 40 },
 ];
 
 export const UPGRADE_COSTS: Record<CandyCategory, [number, number]> = {
@@ -50,7 +50,7 @@ export const EVENT_DESC: Record<DailyEvent, string> = {
 export interface Stage {
   name: string;
   rent: number;
-  target: number | null; // null = endless
+  target: number | null;
 }
 
 export const STAGES: Stage[] = [
@@ -62,14 +62,14 @@ export const STAGES: Stage[] = [
 
 export interface GameState {
   cash: number;
-  reputation: number;       // 0–100
+  reputation: number;
   day: number;
   stageIdx: number;
-  gummyTier: number;        // 0–2
+  gummyTier: number;
   chocoTier: number;
   hardTier: number;
   stock: Record<CandyCategory, number>;
-  secLevel: number;         // 0–3
+  secLevel: number;
   dailyEvent: DailyEvent;
   highScore: number;
 }
@@ -79,7 +79,7 @@ export function makeInitialState(): GameState {
   if (saved) {
     try { return JSON.parse(saved) as GameState; } catch { /* fall through */ }
   }
-  const hs = parseInt(localStorage.getItem("candyshop_highscore") ?? "0", 10) || 0;
+  const hs = loadHighScore();
   return {
     cash: 30,
     reputation: 50,
@@ -97,19 +97,24 @@ export function makeInitialState(): GameState {
 
 export function saveState(gs: GameState) {
   localStorage.setItem("candyshop_save", JSON.stringify(gs));
-  localStorage.setItem("candyshop_highscore", String(gs.highScore));
 }
 
 export function clearSave() {
   localStorage.removeItem("candyshop_save");
 }
 
-// ── Security upgrade costs ────────────────────────────────────────────────────
-export const SEC_COSTS = [30, 80, 200]; // cost to go from 0→1, 1→2, 2→3
-export const SEC_NAMES = ["No Cameras", "Basic Cameras", "HD CCTV", "AI Smart Tracking"];
-export const SEC_WINDOWS = [1.5, 3, 4.5, 6]; // seconds to catch thief
+function loadHighScore(): number {
+  try { return parseInt(localStorage.getItem("candyshop_hs") ?? "0", 10) || 0; } catch { return 0; }
+}
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+export function saveHighScore(n: number) {
+  try { localStorage.setItem("candyshop_hs", String(n)); } catch { /* ignore */ }
+}
+
+export const SEC_COSTS = [30, 80, 200];
+export const SEC_NAMES = ["No Cameras", "Basic Cameras", "HD CCTV", "AI Smart Tracking"];
+export const SEC_WINDOWS = [1.5, 3, 4.5, 6];
+
 export function currentTier(gs: GameState, cat: CandyCategory): CandyTier {
   if (cat === "gummy") return GUMMY_TIERS[gs.gummyTier]!;
   if (cat === "choco") return CHOCO_TIERS[gs.chocoTier]!;

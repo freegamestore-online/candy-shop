@@ -1,5 +1,5 @@
 // ── Afternoon Shift Scene ─────────────────────────────────────────────────────
-// Real-time timed events: serve customers by tapping/typing codes, catch thieves.
+// Real-time timed events: serve customers by tapping/typing, catch thieves.
 
 import kaplay from "kaplay";
 import {
@@ -43,10 +43,8 @@ const CAT_COLORS: Record<CandyCategory, [number, number, number]> = {
 
 export function registerShiftScene(k: K, gs: GameState, onDone: () => void) {
   k.scene("shift", () => {
-    // Background
     k.add([k.rect(VW, VH), k.color(20, 30, 20), k.pos(0, 0), k.fixed()]);
 
-    // Header
     k.add([
       k.text("🛍️ The Shift is Open!", { size: 20, font: "sans-serif" }),
       k.color(255, 220, 80),
@@ -117,7 +115,7 @@ export function registerShiftScene(k: K, gs: GameState, onDone: () => void) {
       k.anchor("center"),
     ]);
 
-    // Timer bar (bg then bar)
+    // Timer bar
     k.add([
       k.rect(380, 14, { radius: 6 }),
       k.color(50, 50, 60),
@@ -131,7 +129,7 @@ export function registerShiftScene(k: K, gs: GameState, onDone: () => void) {
       k.anchor("center"),
     ]);
 
-    // Typing input
+    // Typing input display
     k.add([
       k.rect(280, 52, { radius: 8 }),
       k.color(30, 40, 30),
@@ -173,7 +171,7 @@ export function registerShiftScene(k: K, gs: GameState, onDone: () => void) {
       }
     }
 
-    // Category buttons (for touch/click)
+    // Category buttons (touch)
     const BTN_Y = 490;
     const btnDefs: { cat: CandyCategory; x: number; label: string }[] = [
       { cat: "gummy", x: VW / 2 - 130, label: "GUM\n[G]" },
@@ -213,7 +211,6 @@ export function registerShiftScene(k: K, gs: GameState, onDone: () => void) {
       k.anchor("center"),
     ]);
 
-    // Attribution
     k.add([
       k.text("freegamestore.online", { size: 10, font: "sans-serif" }),
       k.color(60, 80, 60),
@@ -295,7 +292,6 @@ export function registerShiftScene(k: K, gs: GameState, onDone: () => void) {
       eventType = "thief";
       const secLevel = gs.secLevel;
 
-      // AI auto-catch at level 3 (50% chance)
       if (secLevel >= 3 && Math.random() < 0.5) {
         addLog("🤖 AI Camera auto-caught a thief!");
         gs.reputation = clampRep(gs.reputation + 5);
@@ -408,7 +404,7 @@ export function registerShiftScene(k: K, gs: GameState, onDone: () => void) {
       }
     });
 
-    // Touch / click buttons
+    // Touch buttons
     for (const btn of catBtns) {
       btn.bg.onClick(() => {
         if (eventType !== "customer") return;
@@ -449,7 +445,6 @@ export function registerShiftScene(k: K, gs: GameState, onDone: () => void) {
       }
     });
 
-    // Kick off first event after a short delay
     k.wait(1.2, nextEvent);
   });
 }
