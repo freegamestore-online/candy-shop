@@ -174,9 +174,9 @@ export function registerShiftScene(k: K, gs: GameState, onDone: () => void) {
     // Category buttons (touch/click)
     const BTN_Y = 490;
     const btnDefs: { cat: CandyCategory; x: number; label: string }[] = [
-      { cat: "gummy", x: VW / 2 - 130, label: "GUM\n[G]" },
-      { cat: "choco", x: VW / 2,        label: "CHO\n[C]" },
-      { cat: "hard",  x: VW / 2 + 130,  label: "HAR\n[H]" },
+      { cat: "gummy", x: VW / 2 - 130, label: "GUM\n(G)" },
+      { cat: "choco", x: VW / 2,        label: "CHO\n(C)" },
+      { cat: "hard",  x: VW / 2 + 130,  label: "HAR\n(H)" },
     ];
 
     type GameObj = ReturnType<K["add"]>;
@@ -208,7 +208,7 @@ export function registerShiftScene(k: K, gs: GameState, onDone: () => void) {
       k.area(),
     ]);
     k.add([
-      k.text("STOP\n[Type it!]", { size: 14, font: "sans-serif", align: "center" }),
+      k.text("STOP\nType it!", { size: 14, font: "sans-serif", align: "center" }),
       k.color(255, 255, 255),
       k.pos(VW / 2, BTN_Y),
       k.anchor("center"),
