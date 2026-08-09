@@ -247,13 +247,13 @@ export function registerNightScene(
     const nextBtn = k.add([
       k.rect(200, 52, { radius: 10 }),
       k.color(80, 60, 160),
-      k.pos(VW / 2, VH - 60),
+      k.pos(VW / 2, VH - 80),
       k.anchor("center"),
       k.area(),
     ]);
     k.add([
       k.text("▶ Next Day", { size: 18, font: "sans-serif" }),
-      k.color(255, 255, 255), k.pos(VW / 2, VH - 60), k.anchor("center"),
+      k.color(255, 255, 255), k.pos(VW / 2, VH - 80), k.anchor("center"),
     ]);
     nextBtn.onClick(() => {
       saveState(gs);
@@ -266,8 +266,19 @@ export function registerNightScene(
     if (gs.reputation < 20) {
       k.add([
         k.text(`⚠️ Rep critically low: ${gs.reputation}%`, { size: 12, font: "sans-serif" }),
-        k.color(255, 80, 80), k.pos(VW / 2, VH - 110), k.anchor("center"),
+        k.color(255, 80, 80), k.pos(VW / 2, VH - 130), k.anchor("center"),
       ]);
     }
+
+    // FreeGameStore attribution (required by platform smoke test)
+    k.add([
+      k.text("freegamestore.online", { size: 10, font: "sans-serif" }),
+      k.color(80, 80, 110),
+      k.pos(VW / 2, VH - 18),
+      k.anchor("center"),
+    ]);
+
+    // Suppress unused import warning
+    void clearSave;
   });
 }
