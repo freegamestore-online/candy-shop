@@ -40,7 +40,7 @@ export function registerNightScene(
     ]);
 
     // ── Pay rent ──────────────────────────────────────────────────────────────
-    const rentDue = stage.rent;
+    const rentDue    = stage.rent;
     const cashBefore = gs.cash;
     gs.cash = Math.max(0, gs.cash - rentDue);
 
@@ -59,12 +59,12 @@ export function registerNightScene(
       k.anchor("center"),
     ]);
 
-    const rows: [string, string, [number,number,number]][] = [
-      ["💰 Cash before rent", `$${cashBefore}`,           [160, 255, 160]],
-      ["🏠 Rent paid",        `-$${rentDue}`,             [255, 140,  80]],
-      ["💰 Cash remaining",   `$${gs.cash}`,              [120, 220, 120]],
-      ["⭐ Reputation",       `${gs.reputation}%`,        [255, 220,  80]],
-      ["🏆 Best cash ever",   `$${gs.highScore}`,         [255, 200,  60]],
+    const rows: [string, string, [number, number, number]][] = [
+      ["💰 Cash before rent", `$${cashBefore}`,        [160, 255, 160]],
+      ["🏠 Rent paid",        `-$${rentDue}`,          [255, 140,  80]],
+      ["💰 Cash remaining",   `$${gs.cash}`,           [120, 220, 120]],
+      ["⭐ Reputation",       `${gs.reputation}%`,     [255, 220,  80]],
+      ["🏆 Best cash ever",   `$${gs.highScore}`,      [255, 200,  60]],
     ];
     rows.forEach(([label, value, color], i) => {
       k.add([
@@ -84,7 +84,7 @@ export function registerNightScene(
     // ── Stage progress ────────────────────────────────────────────────────────
     const progressY = 310;
     let statusMsg = "";
-    let statusColor: [number,number,number] = [200, 200, 220];
+    let statusColor: [number, number, number] = [200, 200, 220];
     let nextAction: "morning" | "gameover_bankrupt" | "gameover_rep" | "stageup" = "morning";
 
     if (gs.reputation <= 0) {
@@ -101,9 +101,10 @@ export function registerNightScene(
       nextAction  = "stageup";
     } else {
       const remaining = stage.target !== null ? stage.target - gs.cash : null;
-      statusMsg   = remaining !== null
-        ? `📈 Need $${remaining} more to reach stage target.`
-        : `🌟 Endless mode — keep going!`;
+      statusMsg =
+        remaining !== null
+          ? `📈 Need $${remaining} more to reach stage target.`
+          : `🌟 Endless mode — keep going!`;
       statusColor = [160, 200, 255];
       nextAction  = "morning";
     }
@@ -115,7 +116,6 @@ export function registerNightScene(
       k.anchor("center"),
     ]);
 
-    // Stage-up banner
     if (nextAction === "stageup" && gs.stageIdx < STAGES.length - 1) {
       const nextStage = STAGES[gs.stageIdx + 1]!;
       k.add([
@@ -129,8 +129,7 @@ export function registerNightScene(
     // ── Continue / Game-over button ───────────────────────────────────────────
     const btnY = 430;
     const isOver = nextAction === "gameover_bankrupt" || nextAction === "gameover_rep";
-
-    const btnColor: [number,number,number] = isOver ? [160, 40, 40] : [60, 120, 200];
+    const btnColor: [number, number, number] = isOver ? [160, 40, 40] : [60, 120, 200];
     const btnLabel = isOver ? "See Results" : "Next Day →";
 
     const btn = k.add([
@@ -177,7 +176,6 @@ export function registerNightScene(
     k.onKeyPress("enter", proceed);
     k.onKeyPress("space", proceed);
 
-    // Attribution
     k.add([
       k.text("freegamestore.online", { size: 10, font: "sans-serif" }),
       k.color(50, 50, 75),

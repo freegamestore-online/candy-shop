@@ -22,11 +22,12 @@ type K = ReturnType<typeof kaplay>;
 
 const VW = 480;
 const VH = 640;
-
-const STOCK_COST = 8; // cost per unit of any candy
+const STOCK_COST = 8;
 
 function rollDailyEvent(gs: GameState) {
-  const events: GameState["dailyEvent"][] = ["normal", "normal", "normal", "flash", "bogo", "rainy", "thief_spree"];
+  const events: GameState["dailyEvent"][] = [
+    "normal", "normal", "normal", "flash", "bogo", "rainy", "thief_spree",
+  ];
   gs.dailyEvent = events[Math.floor(Math.random() * events.length)]!;
 }
 
@@ -35,10 +36,8 @@ export function registerMorningScene(k: K, gs: GameState, onDone: () => void) {
     rollDailyEvent(gs);
     saveState(gs);
 
-    // Background
     k.add([k.rect(VW, VH), k.color(20, 16, 40), k.pos(0, 0), k.fixed()]);
 
-    // Header
     const stage = STAGES[gs.stageIdx]!;
     k.add([
       k.text(`☀️ Morning Prep — Day ${gs.day}`, { size: 20, font: "sans-serif" }),
@@ -53,7 +52,6 @@ export function registerMorningScene(k: K, gs: GameState, onDone: () => void) {
       k.anchor("center"),
     ]);
 
-    // Cash display
     const cashLabel = k.add([
       k.text(`💰 $${gs.cash}`, { size: 18, font: "sans-serif" }),
       k.color(120, 255, 120),
@@ -82,7 +80,7 @@ export function registerMorningScene(k: K, gs: GameState, onDone: () => void) {
       k.anchor("center"),
     ]);
 
-    // ── Section: Buy Stock ────────────────────────────────────────────────────
+    // ── Buy Stock ─────────────────────────────────────────────────────────────
     k.add([
       k.text("🛒 Buy Stock  ($8 each)", { size: 14, font: "sans-serif" }),
       k.color(200, 200, 255),
@@ -97,26 +95,22 @@ export function registerMorningScene(k: K, gs: GameState, onDone: () => void) {
       hard:  [100, 200, 255],
     };
 
-    const stockLabels: Partial<Record<CandyCategory, ReturnType<K["add"]>>> = {};
-
     cats.forEach((cat, i) => {
       const y = 178 + i * 50;
       const tier = currentTier(gs, cat);
 
       const lbl = k.add([
-        k.text("", { size: 13, font: "sans-serif" }),
+        k.text(`${tier.name}  ×${gs.stock[cat]}`, { size: 13, font: "sans-serif" }),
         k.color(...CAT_COLORS[cat]),
         k.pos(24, y),
         k.anchor("left"),
       ]);
-      stockLabels[cat] = lbl;
 
       function refreshStock() {
-        lbl.text = `${tier.name}  ×${gs.stock[cat]}`;
+        const t = currentTier(gs, cat);
+        lbl.text = `${t.name}  ×${gs.stock[cat]}`;
       }
-      refreshStock();
 
-      // Buy button
       const btn = k.add([
         k.rect(90, 36, { radius: 8 }),
         k.color(50, 80, 50),
@@ -143,7 +137,7 @@ export function registerMorningScene(k: K, gs: GameState, onDone: () => void) {
       });
     });
 
-    // ── Section: Upgrade Candy ────────────────────────────────────────────────
+    // ── Upgrade Candy ─────────────────────────────────────────────────────────
     k.add([
       k.text("⬆️ Upgrade Candy", { size: 14, font: "sans-serif" }),
       k.color(200, 200, 255),
@@ -153,24 +147,29 @@ export function registerMorningScene(k: K, gs: GameState, onDone: () => void) {
 
     cats.forEach((cat, i) => {
       const y = 362 + i * 44;
-      const tierIdx = cat === "gummy" ? gs.gummyTier : cat === "choco" ? gs.chocoTier : gs.hardTier;
+      const tiers = cat === "gummy" ? GUMMY_TIERS : cat === "choco" ? CHOCO_TIERS : HARD_TIERS;
       const costs = UPGRADE_COSTS[cat];
       const maxTier = 2;
 
+      const getTierIdx = () =>
+        cat === "gummy" ? gs.gummyTier : cat === "choco" ? gs.chocoTier : gs.hardTier;
+
       const tierLbl = k.add([
-        k.text("", { size: 12, font: "sans-serif" }),
+        k.text(`${tiers[getTierIdx()]!.name}  (Tier ${getTierIdx() + 1}/3)`, {
+          size: 12,
+          font: "sans-serif",
+        }),
         k.color(...CAT_COLORS[cat]),
         k.pos(24, y),
         k.anchor("left"),
       ]);
 
       function refreshTier() {
-        const ti = cat === "gummy" ? gs.gummyTier : cat === "choco" ? gs.chocoTier : gs.hardTier;
-        const tiers = cat === "gummy" ? GUMMY_TIERS : cat === "choco" ? CHOCO_TIERS : HARD_TIERS;
+        const ti = getTierIdx();
         tierLbl.text = `${tiers[ti]!.name}  (Tier ${ti + 1}/3)`;
       }
-      refreshTier();
 
+      const tierIdx = getTierIdx();
       if (tierIdx < maxTier) {
         const cost = costs[tierIdx]!;
         const btn = k.add([
@@ -188,7 +187,7 @@ export function registerMorningScene(k: K, gs: GameState, onDone: () => void) {
         ]);
 
         btn.onClick(() => {
-          const ti = cat === "gummy" ? gs.gummyTier : cat === "choco" ? gs.chocoTier : gs.hardTier;
+          const ti = getTierIdx();
           if (ti >= maxTier) return;
           const c = costs[ti]!;
           if (gs.cash >= c) {
@@ -211,7 +210,7 @@ export function registerMorningScene(k: K, gs: GameState, onDone: () => void) {
       }
     });
 
-    // ── Section: Security ─────────────────────────────────────────────────────
+    // ── Security ──────────────────────────────────────────────────────────────
     k.add([
       k.text("🔒 Security", { size: 14, font: "sans-serif" }),
       k.color(200, 200, 255),
@@ -220,7 +219,10 @@ export function registerMorningScene(k: K, gs: GameState, onDone: () => void) {
     ]);
 
     const secLbl = k.add([
-      k.text("", { size: 12, font: "sans-serif" }),
+      k.text(`${SEC_NAMES[gs.secLevel]!}  (Level ${gs.secLevel}/3)`, {
+        size: 12,
+        font: "sans-serif",
+      }),
       k.color(180, 200, 255),
       k.pos(24, 522),
       k.anchor("left"),
@@ -228,7 +230,6 @@ export function registerMorningScene(k: K, gs: GameState, onDone: () => void) {
     function refreshSec() {
       secLbl.text = `${SEC_NAMES[gs.secLevel]!}  (Level ${gs.secLevel}/3)`;
     }
-    refreshSec();
 
     if (gs.secLevel < 3) {
       const secCost = SEC_COSTS[gs.secLevel]!;

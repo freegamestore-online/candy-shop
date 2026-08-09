@@ -53,7 +53,7 @@ export function registerShiftScene(k: K, gs: GameState, onDone: () => void) {
     ]);
 
     const cashLabel = k.add([
-      k.text(`💰 $${gs.cash.toFixed(0)}`, { size: 14, font: "sans-serif" }),
+      k.text(`💰 $${gs.cash}`, { size: 14, font: "sans-serif" }),
       k.color(160, 255, 160),
       k.pos(16, 46),
       k.anchor("left"),
@@ -72,7 +72,7 @@ export function registerShiftScene(k: K, gs: GameState, onDone: () => void) {
     ]);
 
     function refreshStats() {
-      cashLabel.text = `💰 $${gs.cash.toFixed(0)}`;
+      cashLabel.text = `💰 $${gs.cash}`;
       repLabel.text  = `⭐ ${gs.reputation}%`;
       const gn = catName(gs, "gummy");
       const cn = catName(gs, "choco");
@@ -88,7 +88,7 @@ export function registerShiftScene(k: K, gs: GameState, onDone: () => void) {
       k.anchor("center"),
     ]);
 
-    // Event display area
+    // Event display area background
     k.add([
       k.rect(440, 200, { radius: 12 }),
       k.color(40, 50, 40),
@@ -115,7 +115,7 @@ export function registerShiftScene(k: K, gs: GameState, onDone: () => void) {
       k.anchor("center"),
     ]);
 
-    // Timer bar
+    // Timer bar track
     k.add([
       k.rect(380, 14, { radius: 6 }),
       k.color(50, 50, 60),
@@ -125,8 +125,8 @@ export function registerShiftScene(k: K, gs: GameState, onDone: () => void) {
     const timerBar = k.add([
       k.rect(380, 14, { radius: 6 }),
       k.color(80, 220, 80),
-      k.pos(VW / 2, 252),
-      k.anchor("center"),
+      k.pos(110, 252),
+      k.anchor("left"),
     ]);
 
     // Typing input display
@@ -171,14 +171,17 @@ export function registerShiftScene(k: K, gs: GameState, onDone: () => void) {
       }
     }
 
-    // Category buttons (touch)
+    // Category buttons (touch/click)
     const BTN_Y = 490;
     const btnDefs: { cat: CandyCategory; x: number; label: string }[] = [
       { cat: "gummy", x: VW / 2 - 130, label: "GUM\n[G]" },
       { cat: "choco", x: VW / 2,        label: "CHO\n[C]" },
       { cat: "hard",  x: VW / 2 + 130,  label: "HAR\n[H]" },
     ];
-    const catBtns: { cat: CandyCategory; bg: ReturnType<K["add"]> }[] = [];
+
+    type GameObj = ReturnType<K["add"]>;
+    const catBtns: { cat: CandyCategory; bg: GameObj }[] = [];
+
     for (const def of btnDefs) {
       const bg = k.add([
         k.rect(100, 60, { radius: 8 }),
@@ -222,6 +225,7 @@ export function registerShiftScene(k: K, gs: GameState, onDone: () => void) {
     type EventType = "idle" | "customer" | "thief" | "finished";
     let eventType: EventType = "idle";
     let timeLeft = 0;
+    let maxTime  = 4;
     let customerCat: CandyCategory = "gummy";
     let typed = "";
     let shiftDone = false;
@@ -246,7 +250,6 @@ export function registerShiftScene(k: K, gs: GameState, onDone: () => void) {
       eventLine2.text = "";
       timerBar.width  = 0;
       inputLabel.text = "";
-      inputLabel.color = k.rgb(120, 120, 140);
       typed = "";
       setButtonsVisible("none");
       eventBg.color = k.rgb(40, 50, 40);
@@ -273,9 +276,10 @@ export function registerShiftScene(k: K, gs: GameState, onDone: () => void) {
       eventType = "customer";
       const cats: CandyCategory[] = ["gummy", "choco", "hard"];
       customerCat = cats[Math.floor(Math.random() * 3)]!;
-      const name     = catName(gs, customerCat);
+      const name    = catName(gs, customerCat);
       const patience = gs.dailyEvent === "flash" ? 2 : 4;
-      timeLeft = patience;
+      maxTime   = patience;
+      timeLeft  = patience;
 
       eventBg.color   = k.rgb(30, 60, 80);
       eventIcon.text  = "🧑";
@@ -303,6 +307,7 @@ export function registerShiftScene(k: K, gs: GameState, onDone: () => void) {
       }
 
       const window = SEC_WINDOWS[secLevel] ?? 1.5;
+      maxTime  = window;
       timeLeft = window;
 
       eventBg.color   = k.rgb(80, 20, 20);
@@ -404,7 +409,7 @@ export function registerShiftScene(k: K, gs: GameState, onDone: () => void) {
       }
     });
 
-    // Touch buttons
+    // Touch/click buttons
     for (const btn of catBtns) {
       btn.bg.onClick(() => {
         if (eventType !== "customer") return;
@@ -426,12 +431,6 @@ export function registerShiftScene(k: K, gs: GameState, onDone: () => void) {
       if (eventType !== "customer" && eventType !== "thief") return;
       timeLeft -= k.dt();
 
-      const maxTime =
-        eventType === "thief"
-          ? (SEC_WINDOWS[gs.secLevel] ?? 1.5)
-          : gs.dailyEvent === "flash"
-            ? 2
-            : 4;
       const frac = Math.max(0, timeLeft / maxTime);
       timerBar.width = 380 * frac;
 

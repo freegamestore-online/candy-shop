@@ -1,4 +1,4 @@
-// ── Candy Shop Tycoon: Sweet Security — main entry point ─────────────────────
+// ── Candy Shop Tycoon — main entry point ──────────────────────────────────────
 
 import kaplay from "kaplay";
 import { makeInitialState, saveState, clearSave, GameState } from "./lib/state";
@@ -9,11 +9,13 @@ import { registerNightScene } from "./lib/night";
 const VW = 480;
 const VH = 640;
 
+type K = ReturnType<typeof kaplay>;
+
 export function startGame(
   canvas: HTMLCanvasElement,
   onScore: (n: number) => void,
 ): () => void {
-  const k = kaplay({
+  const k: K = kaplay({
     canvas,
     width: VW,
     height: VH,
@@ -24,11 +26,9 @@ export function startGame(
     pixelDensity: Math.min(window.devicePixelRatio || 1, 2),
   });
 
-  // Shared mutable game state — all scenes read/write the same object.
   const gs: GameState = makeInitialState();
   onScore(gs.highScore);
 
-  // ── Phase transition helpers ─────────────────────────────────────────────
   function goMorning() {
     onScore(gs.highScore);
     k.go("morning");
@@ -43,7 +43,6 @@ export function startGame(
     k.go("gameover", reason);
   }
 
-  // ── Register all scenes ──────────────────────────────────────────────────
   registerMorningScene(k, gs, goShift);
   registerShiftScene(k, gs, goNight);
   registerNightScene(k, gs, goMorning, goGameOver);
@@ -52,7 +51,8 @@ export function startGame(
   k.scene("gameover", (reason: string) => {
     k.add([k.rect(VW, VH), k.color(20, 10, 10), k.pos(0, 0), k.fixed()]);
 
-    const title    = reason === "bankrupt" ? "💸 Bankrupt!" : "🚪 Shop Closed!";
+    const title =
+      reason === "bankrupt" ? "💸 Bankrupt!" : "🚪 Shop Closed!";
     const subtitle =
       reason === "bankrupt"
         ? "You couldn't pay the rent."
@@ -83,7 +83,6 @@ export function startGame(
       k.anchor("center"),
     ]);
 
-    // Play again button
     const btn = k.add([
       k.rect(220, 56, { radius: 12 }),
       k.color(80, 60, 160),
@@ -98,11 +97,19 @@ export function startGame(
       k.anchor("center"),
     ]);
 
+    // Pulse animation
+    let pulse = 0;
+    k.onUpdate(() => {
+      pulse += k.dt() * 2;
+      const s = 1 + Math.sin(pulse) * 0.03;
+      btn.width  = 220 * s;
+      btn.height = 56 * s;
+    });
+
     function restart() {
       clearSave();
       const fresh = makeInitialState();
       Object.assign(gs, fresh);
-      gs.highScore = fresh.highScore;
       onScore(gs.highScore);
       k.go("morning");
     }
@@ -121,7 +128,6 @@ export function startGame(
       k.anchor("center"),
     ]);
 
-    // Platform attribution
     k.add([
       k.text("freegamestore.online", { size: 11, font: "sans-serif" }),
       k.color(100, 100, 130),
@@ -132,7 +138,6 @@ export function startGame(
     saveState(gs);
   });
 
-  // ── Start ────────────────────────────────────────────────────────────────
   k.go("morning");
 
   return () => k.quit();
