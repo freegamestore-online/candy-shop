@@ -23,7 +23,7 @@ export default function App() {
     <GameShell
       topbar={
         <GameTopbar
-          title="Candy Shop Tycoon"
+          title="Candy Shop"
           score={highScore}
         />
       }
