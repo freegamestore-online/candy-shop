@@ -1,5 +1,4 @@
 // ── Candy Shop Tycoon: Sweet Security — main entry point ─────────────────────
-// Wires KAPLAY + all phase scenes together into a single game loop.
 
 import kaplay from "kaplay";
 import { makeInitialState, saveState, clearSave, GameState } from "./lib/state";
@@ -21,6 +20,8 @@ export function startGame(
     letterbox: true,
     background: [10, 8, 20],
     global: false,
+    // forceCanvas avoids WebGL context failures in headless/CI environments
+    forceCanvas: true,
     pixelDensity: Math.min(window.devicePixelRatio || 1, 2),
   });
 
@@ -123,20 +124,17 @@ export function startGame(
       k.go("morning");
     });
 
-    // Tips
     k.add([
-      k.text("Tips: Upgrade candy to earn more per sale.\nKeep reputation above 20% at all costs!", {
-        size: 12,
-        font: "sans-serif",
-        width: 380,
-        align: "center",
-      }),
+      k.text(
+        "Tips: Upgrade candy to earn more per sale.\nKeep reputation above 20% at all costs!",
+        { size: 12, font: "sans-serif", width: 380, align: "center" },
+      ),
       k.color(160, 160, 180),
       k.pos(VW / 2, 430),
       k.anchor("center"),
     ]);
 
-    // FreeGameStore attribution (required by platform smoke test)
+    // Platform attribution (also checked by smoke test grep)
     k.add([
       k.text("freegamestore.online", { size: 11, font: "sans-serif" }),
       k.color(100, 100, 130),
@@ -144,7 +142,7 @@ export function startGame(
       k.anchor("center"),
     ]);
 
-    saveState(gs); // persist high score
+    saveState(gs);
   });
 
   // ── Start ────────────────────────────────────────────────────────────────

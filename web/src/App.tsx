@@ -4,14 +4,19 @@ import { startGame } from "./game";
 
 export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  // onScore receives the running high-score cash value from the game
   const [highScore, setHighScore] = useState(0);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const stop = startGame(canvas, setHighScore);
-    return stop;
+    let stop: (() => void) | undefined;
+    try {
+      stop = startGame(canvas, setHighScore);
+    } catch (e) {
+      setError(String(e));
+    }
+    return () => { try { stop?.(); } catch { /* ignore */ } };
   }, []);
 
   return (
@@ -23,7 +28,16 @@ export default function App() {
         />
       }
     >
-      <canvas ref={canvasRef} className="w-full h-full block touch-none" />
+      {error ? (
+        <div className="flex items-center justify-center w-full h-full text-red-400 font-sans p-4 text-center">
+          <div>
+            <p className="text-lg font-bold mb-2">Failed to start game</p>
+            <p className="text-sm opacity-70">{error}</p>
+          </div>
+        </div>
+      ) : (
+        <canvas ref={canvasRef} className="w-full h-full block touch-none" />
+      )}
     </GameShell>
   );
 }
