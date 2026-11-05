@@ -22,7 +22,6 @@ export function startGame(
     letterbox: true,
     background: [10, 8, 20],
     global: false,
-    forceCanvas: true,
     pixelDensity: Math.min(window.devicePixelRatio || 1, 2),
   });
 

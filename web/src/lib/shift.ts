@@ -2,6 +2,7 @@
 // Real-time timed events: serve customers by tapping/typing, catch thieves.
 
 import kaplay from "kaplay";
+import type { AreaComp, GameObj, TextComp } from "kaplay";
 import {
   GameState,
   CandyCategory,
@@ -152,7 +153,7 @@ export function registerShiftScene(k: K, gs: GameState, onDone: () => void) {
 
     // Log lines
     const logLines: string[] = [];
-    const logObjs: ReturnType<K["add"]>[] = [];
+    const logObjs: GameObj<TextComp>[] = [];
     for (let i = 0; i < 5; i++) {
       logObjs.push(
         k.add([
@@ -179,8 +180,7 @@ export function registerShiftScene(k: K, gs: GameState, onDone: () => void) {
       { cat: "hard",  x: VW / 2 + 130,  label: "HAR\n(H)" },
     ];
 
-    type GameObj = ReturnType<K["add"]>;
-    const catBtns: { cat: CandyCategory; bg: GameObj }[] = [];
+    const catBtns: { cat: CandyCategory; bg: GameObj<AreaComp> }[] = [];
 
     for (const def of btnDefs) {
       const bg = k.add([
